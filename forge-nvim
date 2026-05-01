@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Bootstrap the Neovim toolchain on Ubuntu.
+#
+# Mason installs most LSPs/formatters/linters at runtime, but it relies on a
+# working set of language toolchains being available system-wide. When those
+# are missing, half the Mason packages silently fail to install. This script
+# pre-stages every external dependency the nvim config needs, so the very
+# first `nvim` launch can pull everything down cleanly.
+#
+# What gets installed:
+#
+#   * Neovim itself via the official PPA (Ubuntu 24.04 ships 0.9.5 in apt;
+#     this config uses 0.11+ APIs and nvim-treesitter's `main` branch).
+#   * Build toolchain     — gcc, make, git, unzip (treesitter parsers,
+#                            telescope-fzf-native, blink.cmp regex engine).
+#   * Node.js + npm        — pyright, bashls, html, cssls, prettier.
+#   * Python + pip + pipx  — fallback path for Mason recipes / ruff backups.
+#   * default-jre-headless — google-java-format runs as a JAR.
+#   * tree-sitter CLI      — required by nvim-treesitter `main` to compile
+#                            parsers (not packaged in apt; installed via npm
+#                            into ~/.local to avoid sudo).
+#   * ripgrep, fd-find     — telescope live_grep / find_files.
+#
+# Idempotent: re-run any time you suspect Mason is missing a toolchain. Safe
+# to run on its own or as a final step inside `./forge`.
+
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get not found — this script targets Ubuntu/Debian. Aborting." >&2
+    exit 1
+fi
+
+# --- Neovim PPA -------------------------------------------------------------
+# The stock Ubuntu 24.04 nvim is too old for `vim.lsp.config` and the
+# nvim-treesitter `main` branch. Pull in the maintainer-run unstable PPA which
+# tracks current stable release builds.
+if ! apt-cache policy 2>/dev/null | grep -q 'neovim-ppa'; then
+    echo "Adding neovim-ppa/unstable..."
+    sudo apt-get install -y --no-install-recommends software-properties-common
+    sudo add-apt-repository -y ppa:neovim-ppa/unstable
+fi
+
+# --- Packages ---------------------------------------------------------------
+APT_PACKAGES=(
+    # Neovim (PPA build) + build toolchain
+    'neovim'
+    'build-essential'
+    'gcc'
+    'make'
+    'git'
+    'curl'
+    'unzip'
+    'ca-certificates'
+    # Node — drives Mason installs of the npm-based LSPs and prettier
+    'nodejs'
+    'npm'
+    # Python — Mason fallback path; ruff's secondary install route
+    'python3'
+    'python3-pip'
+    'python3-venv'
+    'pipx'
+    # JRE — google-java-format ships as a runnable JAR
+    'default-jre-headless'
+    # Telescope live_grep / find_files
+    'ripgrep'
+    'fd-find'
+)
+
+echo "Updating apt index..."
+sudo apt-get update
+
+echo "Installing nvim toolchain dependencies..."
+sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}" || {
+    echo "Bulk install failed; retrying individually so the rest still install..."
+    for pkg in "${APT_PACKAGES[@]}"; do
+        sudo apt-get install -y --no-install-recommends "$pkg" || echo "  skipped: $pkg"
+    done
+}
+
+# --- tree-sitter CLI --------------------------------------------------------
+# nvim-treesitter `main` compiles parsers via the `tree-sitter` CLI. Not in
+# apt — install via npm into a user prefix so we don't need sudo for global
+# npm modules.
+if ! command -v tree-sitter >/dev/null 2>&1; then
+    echo "Installing tree-sitter CLI via npm..."
+    mkdir -p "$HOME/.local"
+    npm config set prefix "$HOME/.local"
+    npm install -g tree-sitter-cli
+fi
+
+# --- bin shims --------------------------------------------------------------
+# Ubuntu names fd's binary `fdfind`; telescope and other tools call `fd`.
+mkdir -p "$HOME/.local/bin"
+if [[ -x /usr/bin/fdfind && ! -e "$HOME/.local/bin/fd" ]]; then
+    ln -s /usr/bin/fdfind "$HOME/.local/bin/fd"
+fi
+
+# --- Headless first-run -----------------------------------------------------
+# Trigger Lazy plugin sync so the next interactive launch is instant. Mason's
+# `ensure_installed` will run automatically as nvim-lspconfig loads inside
+# the headless session. Treesitter parsers are compiled by the plugin's
+# `build = ':TSUpdate'` hook during Lazy sync.
+#
+# Best-effort: if either step exits non-zero we just print a hint — the user
+# can always finish the install interactively with `:Lazy sync` / `:Mason`.
+if command -v nvim >/dev/null 2>&1; then
+    echo
+    echo "Running headless Lazy sync — this compiles treesitter parsers and"
+    echo "kicks off Mason installs. First run can take a couple of minutes."
+    if ! nvim --headless "+Lazy! sync" +qa 2>&1; then
+        echo "  Lazy sync exited non-zero. Open nvim and run :Lazy to inspect."
+    fi
+    echo
+    echo "Running MasonToolsInstallSync (blocking install of every tool)..."
+    if ! nvim --headless "+MasonToolsInstallSync" +qa 2>&1; then
+        echo "  Mason install exited non-zero. Open nvim and run :Mason."
+    fi
+fi
+
+# --- Status summary ---------------------------------------------------------
+status() {
+    local name=$1 cmd=$2
+    if command -v "$cmd" >/dev/null 2>&1; then
+        printf "  %-18s %s\n" "$name" "$(command -v "$cmd")"
+    else
+        printf "  %-18s MISSING\n" "$name"
+    fi
+}
+
+echo
+echo "Toolchain status:"
+status "nvim" nvim
+status "node" node
+status "npm" npm
+status "python3" python3
+status "pip3" pip3
+status "pipx" pipx
+status "java" java
+status "gcc" gcc
+status "make" make
+status "git" git
+status "tree-sitter" tree-sitter
+status "rg" rg
+status "fd" fd
+
+echo
+echo "Neovim bootstrap complete."
+echo "Open nvim and run \`:checkhealth\` to verify everything resolved."

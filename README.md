@@ -45,8 +45,24 @@ cd ~/dotfiles
 3. Symlink `~/.local/bin/{bat,fd}` to Ubuntu's `batcat` / `fdfind` so
    configs that reference the upstream binary names keep working.
 4. Run `stow -R` for every package above.
-5. Install [Antidote](https://github.com/mattmc3/antidote) for zsh.
-6. `chsh` you to `zsh` if it isn't already your login shell.
+5. Hand off to `./forge-nvim` to install the Neovim toolchain (PPA
+   neovim, node/npm, default-jre, tree-sitter CLI, etc.) and run a
+   headless Lazy + Mason sync.
+6. Install [Antidote](https://github.com/mattmc3/antidote) for zsh.
+7. `chsh` you to `zsh` if it isn't already your login shell.
+
+### Refreshing Neovim deps
+
+If Mason can't fetch a tool because a runtime is missing, re-run the
+nvim bootstrap on its own — it's idempotent:
+
+```bash
+./forge-nvim
+```
+
+It pre-stages everything Mason and `nvim-treesitter` need (node, java,
+gcc, tree-sitter CLI, ripgrep, fd) and triggers a headless `:Lazy sync`
+followed by `:MasonToolsInstallSync`. Verify with `:checkhealth` after.
 
 Log out and back in once it finishes so the new symlinks and shell take
 effect.

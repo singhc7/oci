@@ -36,15 +36,15 @@ APT_PACKAGES=(
     'pipx'
     # CLI productivity
     'aria2'
-    'bat'           # binary is `batcat` on Ubuntu — symlinked below
-    'btop'          # 24.04+; 22.04 ships an older version, install will still succeed
-    'eza'           # 24.04+; on 22.04 `apt install` will fail — see fallback below
-    'fd-find'       # binary is `fdfind` on Ubuntu — symlinked below
+    'bat'     # binary is `batcat` on Ubuntu — symlinked below
+    'btop'    # 24.04+; 22.04 ships an older version, install will still succeed
+    'eza'     # 24.04+; on 22.04 `apt install` will fail — see fallback below
+    'fd-find' # binary is `fdfind` on Ubuntu — symlinked below
     'fzf'
     'jq'
     'nnn'
     'ripgrep'
-    'tealdeer'      # 24.04+; on 22.04 falls back to cargo if available
+    'tealdeer' # 24.04+; on 22.04 falls back to cargo if available
     'yt-dlp'
     'zoxide'
     # Backup / sync
@@ -102,6 +102,14 @@ cd "$HOME/dotfiles" || {
     exit 1
 }
 stow -R "${PACKAGESTOSTOW[@]}"
+
+# --- Neovim toolchain -------------------------------------------------------
+# Delegated to ./forge-nvim so it can be re-run on its own when Mason is
+# missing tools. The script is idempotent — safe to invoke unconditionally.
+if [[ -x "$HOME/dotfiles/forge-nvim" ]]; then
+    echo "Bootstrapping nvim toolchain via ./forge-nvim..."
+    "$HOME/dotfiles/forge-nvim"
+fi
 
 # --- Antidote (zsh plugin manager) ------------------------------------------
 if [[ ! -d "$HOME/.antidote" ]]; then
