@@ -1,0 +1,36 @@
+// rclone-config.stignore — what NOT to sync from ~/.config/rclone/.
+//
+// Symlinked into the rclone-config folder root on every peer:
+//   ln -s ~/projects/oci/syncthing/rclone-config.stignore \
+//         ~/.config/rclone/.stignore
+//
+// Pattern semantics (https://docs.syncthing.net/users/ignoring.html):
+//   - Lines starting with `//` are comments.
+//   - First-match wins; a leading `!` marks an *include* override.
+//   - We use an ALLOWLIST style here: include only the file we mean
+//     to sync, then exclude `*` to deny everything else.
+//
+// Why allowlist and not denylist for this folder: `~/.config/rclone/`
+// is shared territory. Future rclone versions, plugins, or you doing
+// `rclone authorize` from a one-off shell can drop additional files
+// here (token caches, backend state, refresh-token spool files,
+// editor swap files, etc.). A denylist would race future surprises;
+// an allowlist makes it impossible for anything we didn't explicitly
+// approve to leave the machine.
+
+// --- INCLUDE: the one file that is the actual config ----------------
+// rclone.conf MUST be encrypted on disk before syncing
+// (`rclone config` → `s` → set passphrase). Otherwise this file holds
+// every cloud OAuth token and access key in plaintext, and Syncthing
+// then fans them out to every peer. The `syncp.py` pre-flight check
+// + systemd LoadCredential setup (see syncthing/README.md) ensures
+// the unattended OCI side has the passphrase available without ever
+// putting it in the unit environment.
+!rclone.conf
+
+// --- EXCLUDE everything else ---------------------------------------
+// `*` at top level only matches the immediate children of the folder,
+// so files inside accidental subdirectories would still escape; the
+// `**` line is the catch-all for nested paths.
+*
+**

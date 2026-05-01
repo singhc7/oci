@@ -1,0 +1,64 @@
+// vault.stignore — what NOT to sync from the KeePass vault folder.
+//
+// This file is symlinked into the vault folder's root on every peer
+// (e.g. `ln -s ~/projects/oci/syncthing/vault.stignore ~/vault/.stignore`).
+// Syncthing reads `.stignore` from the folder root only, never from a
+// subdirectory, so one symlink per device is all that's needed.
+//
+// Pattern semantics (https://docs.syncthing.net/users/ignoring.html):
+//   - Lines starting with `//` are comments.
+//   - Patterns are glob-style; `*` matches within one path segment,
+//     `**` matches across segments.
+//   - First-match wins. A leading `!` marks an *include* override —
+//     i.e. "do sync this, even though a later pattern would exclude it".
+//   - We use a denylist style here: list known-bad transient files,
+//     let everything else (in practice just `Vault.kdbx`) sync.
+//
+// The whole reason these patterns matter: if Syncthing replicated the
+// `.lock` file, every peer would think the database is held open
+// somewhere else and KeePassXC would refuse read-write access. If it
+// replicated the journal mid-write, peers could see a torn database.
+
+// --- KeePassXC lock file --------------------------------------------
+// Created by KeePassXC the moment it opens Vault.kdbx, deleted on
+// close. Its presence on a peer would (incorrectly) signal that the
+// DB is open elsewhere and trigger a read-only / "in use" prompt.
+// Critical to ignore — this is the most common foot-gun.
+Vault.kdbx.lock
+*.lock
+
+// --- SQLite-style write journals ------------------------------------
+// KeePassXC uses an internal write-then-rename strategy, but on some
+// platforms / configurations a journal file briefly exists during
+// save. Replicating a partial journal could let a peer see an
+// inconsistent intermediate state.
+*.kdbx-journal
+*-journal
+
+// --- KeePassXC on-save backups --------------------------------------
+// If "Backup database file before saving" is enabled, KeePassXC
+// writes the previous version next to the live one. Historical
+// versions are the Borg pipeline's job (`syncp.py` keeps a 7d/4w/6m
+// retention window in the local repo and mirrors offsite). No reason
+// to ship these through Syncthing too — they'd just be churn.
+*.kdbx.bak
+*.kdbx~
+
+// --- OS junk --------------------------------------------------------
+// macOS sprinkles `.DS_Store` and `._*` resource forks into every
+// folder it has ever seen. Linux's `nautilus` / KDE thumbnailers can
+// drop `.directory` files. Android occasionally writes `.nomedia`.
+// None of these belong in a vault sync.
+.DS_Store
+._*
+.directory
+.nomedia
+.Trash-*
+
+// --- Syncthing's own conflict markers -------------------------------
+// When Syncthing can't reconcile two divergent edits it writes the
+// loser to a `*.sync-conflict-*` file. We let those land (so they're
+// visible and recoverable), but they should NOT then re-propagate.
+// Syncthing handles this internally for files it generates; this
+// pattern is belt-and-braces in case one is renamed/copied by hand.
+*.sync-conflict-*
