@@ -11,8 +11,13 @@ set -euo pipefail
 #
 # What gets installed:
 #
-#   * Neovim itself via the official PPA (Ubuntu 24.04 ships 0.9.5 in apt;
-#     this config uses 0.11+ APIs and nvim-treesitter's `main` branch).
+#   * Neovim itself, from the official GitHub release tarball into ~/.local.
+#     Ubuntu 24.04 ships nvim 0.9.5 in apt — too old for `vim.lsp.config`
+#     and nvim-treesitter `main`. We avoid `add-apt-repository ppa:neovim-
+#     ppa/...` because it talks to api.launchpad.net via Python's
+#     launchpadlib, which routinely times out on OCI shapes and aborts the
+#     whole bootstrap with a TimeoutError. GitHub Releases is reachable
+#     anywhere this dotfiles repo can be cloned from.
 #   * Build toolchain     — gcc, make, git, unzip (treesitter parsers,
 #                            telescope-fzf-native, blink.cmp regex engine).
 #   * Node.js + npm        — pyright, bashls, html, cssls, prettier.
@@ -24,27 +29,87 @@ set -euo pipefail
 #   * ripgrep, fd-find     — telescope live_grep / find_files.
 #
 # Idempotent: re-run any time you suspect Mason is missing a toolchain. Safe
-# to run on its own or as a final step inside `./forge`.
+# to run on its own or as a final step inside `./forge`. Network-fragile
+# steps (GitHub fetch, headless plugin sync) warn-and-continue rather than
+# aborting, so a partial failure still leaves the system better off.
 
 if ! command -v apt-get >/dev/null 2>&1; then
     echo "apt-get not found — this script targets Ubuntu/Debian. Aborting." >&2
     exit 1
 fi
 
-# --- Neovim PPA -------------------------------------------------------------
-# The stock Ubuntu 24.04 nvim is too old for `vim.lsp.config` and the
-# nvim-treesitter `main` branch. Pull in the maintainer-run unstable PPA which
-# tracks current stable release builds.
-if ! apt-cache policy 2>/dev/null | grep -q 'neovim-ppa'; then
-    echo "Adding neovim-ppa/unstable..."
-    sudo apt-get install -y --no-install-recommends software-properties-common
-    sudo add-apt-repository -y ppa:neovim-ppa/unstable
+# Ensure ~/.local/bin (where we land nvim and tree-sitter) wins in PATH for
+# the rest of this script's lifetime, regardless of how the user's shell rc
+# orders things.
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- Neovim binary ----------------------------------------------------------
+NVIM_MIN_MAJOR=0
+NVIM_MIN_MINOR=11
+
+nvim_is_recent_enough() {
+    command -v nvim >/dev/null 2>&1 || return 1
+    local ver major minor
+    ver=$(nvim --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1) || return 1
+    major=${ver%%.*}
+    minor=${ver#*.}
+    if (( major > NVIM_MIN_MAJOR )); then
+        return 0
+    fi
+    if (( major == NVIM_MIN_MAJOR && minor >= NVIM_MIN_MINOR )); then
+        return 0
+    fi
+    return 1
+}
+
+install_neovim_from_github() {
+    local arch asset url tmp extracted
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)  asset='nvim-linux-x86_64.tar.gz' ;;
+        aarch64) asset='nvim-linux-arm64.tar.gz' ;;
+        *) echo "  Unsupported arch: $arch" >&2; return 1 ;;
+    esac
+    url="https://github.com/neovim/neovim/releases/latest/download/$asset"
+    tmp=$(mktemp -d) || return 1
+    echo "  Downloading $asset..."
+    if ! curl -fsSL --connect-timeout 15 --retry 2 -o "$tmp/$asset" "$url"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+    if ! tar -xzf "$tmp/$asset" -C "$tmp"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+    extracted=$(find "$tmp" -maxdepth 1 -type d -name 'nvim-linux-*' | head -1)
+    if [[ -z $extracted ]]; then
+        echo "  Extracted tarball had no nvim-linux-* directory." >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    mkdir -p "$HOME/.local/share" "$HOME/.local/bin"
+    rm -rf "$HOME/.local/share/nvim-prebuilt"
+    mv "$extracted" "$HOME/.local/share/nvim-prebuilt"
+    ln -sf "$HOME/.local/share/nvim-prebuilt/bin/nvim" "$HOME/.local/bin/nvim"
+    rm -rf "$tmp"
+}
+
+if nvim_is_recent_enough; then
+    echo "nvim already at $(nvim --version | head -1) — skipping reinstall."
+else
+    echo "Installing latest nvim from GitHub release into ~/.local..."
+    if install_neovim_from_github; then
+        echo "  Installed: $(nvim --version | head -1)"
+    else
+        echo "  GitHub fetch failed — keeping whatever nvim is already on PATH." >&2
+        echo "  The Lazy/Mason sync below needs nvim >= 0.${NVIM_MIN_MINOR}." >&2
+        echo "  Re-run forge-nvim once the network is reachable." >&2
+    fi
 fi
 
-# --- Packages ---------------------------------------------------------------
+# --- Toolchain packages -----------------------------------------------------
 APT_PACKAGES=(
-    # Neovim (PPA build) + build toolchain
-    'neovim'
+    # Build toolchain (treesitter parsers, fzf-native, blink.cmp)
     'build-essential'
     'gcc'
     'make'
@@ -67,6 +132,7 @@ APT_PACKAGES=(
     'fd-find'
 )
 
+echo
 echo "Updating apt index..."
 sudo apt-get update
 
@@ -78,22 +144,33 @@ sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}" || {
     done
 }
 
+# --- bin shims --------------------------------------------------------------
+# Ubuntu names fd's binary `fdfind`; nvim/telescope etc. call `fd`. The same
+# applies to `nodejs` vs `node` on some Ubuntu releases — many npm-installed
+# Mason packages call `node` directly.
+mkdir -p "$HOME/.local/bin"
+if [[ -x /usr/bin/fdfind && ! -e "$HOME/.local/bin/fd" ]]; then
+    ln -s /usr/bin/fdfind "$HOME/.local/bin/fd"
+fi
+if [[ -x /usr/bin/nodejs && ! -e "$HOME/.local/bin/node" ]] && ! command -v node >/dev/null 2>&1; then
+    ln -s /usr/bin/nodejs "$HOME/.local/bin/node"
+fi
+
 # --- tree-sitter CLI --------------------------------------------------------
 # nvim-treesitter `main` compiles parsers via the `tree-sitter` CLI. Not in
 # apt — install via npm into a user prefix so we don't need sudo for global
 # npm modules.
 if ! command -v tree-sitter >/dev/null 2>&1; then
-    echo "Installing tree-sitter CLI via npm..."
-    mkdir -p "$HOME/.local"
-    npm config set prefix "$HOME/.local"
-    npm install -g tree-sitter-cli
-fi
-
-# --- bin shims --------------------------------------------------------------
-# Ubuntu names fd's binary `fdfind`; telescope and other tools call `fd`.
-mkdir -p "$HOME/.local/bin"
-if [[ -x /usr/bin/fdfind && ! -e "$HOME/.local/bin/fd" ]]; then
-    ln -s /usr/bin/fdfind "$HOME/.local/bin/fd"
+    if command -v npm >/dev/null 2>&1; then
+        echo "Installing tree-sitter CLI via npm..."
+        mkdir -p "$HOME/.local"
+        npm config set prefix "$HOME/.local"
+        if ! npm install -g tree-sitter-cli; then
+            echo "  tree-sitter-cli install failed — re-run later or build via cargo." >&2
+        fi
+    else
+        echo "  npm not available; skipping tree-sitter CLI install." >&2
+    fi
 fi
 
 # --- Headless first-run -----------------------------------------------------
@@ -104,18 +181,21 @@ fi
 #
 # Best-effort: if either step exits non-zero we just print a hint — the user
 # can always finish the install interactively with `:Lazy sync` / `:Mason`.
-if command -v nvim >/dev/null 2>&1; then
+if nvim_is_recent_enough; then
     echo
     echo "Running headless Lazy sync — this compiles treesitter parsers and"
     echo "kicks off Mason installs. First run can take a couple of minutes."
-    if ! nvim --headless "+Lazy! sync" +qa 2>&1; then
+    if ! nvim --headless "+Lazy! sync" +qa; then
         echo "  Lazy sync exited non-zero. Open nvim and run :Lazy to inspect."
     fi
     echo
     echo "Running MasonToolsInstallSync (blocking install of every tool)..."
-    if ! nvim --headless "+MasonToolsInstallSync" +qa 2>&1; then
+    if ! nvim --headless "+MasonToolsInstallSync" +qa; then
         echo "  Mason install exited non-zero. Open nvim and run :Mason."
     fi
+else
+    echo
+    echo "Skipping headless sync — no nvim 0.${NVIM_MIN_MINOR}+ on PATH."
 fi
 
 # --- Status summary ---------------------------------------------------------
