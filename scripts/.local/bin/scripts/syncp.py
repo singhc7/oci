@@ -18,6 +18,13 @@ LoadCredential= so the secret never sits in the unit environment in
 plaintext; the script reads BORG_PASSCOMMAND, which Borg supports
 natively.
 
+The same pattern applies to the rclone configuration passphrase once
+`rclone.conf` is encrypted (it is, because the config is now shared
+across machines via Syncthing — see syncthing/README.md). The unit
+loads the passphrase via a second LoadCredential= line and exposes it
+to rclone through RCLONE_PASSWORD_COMMAND, rclone's native equivalent
+of BORG_PASSCOMMAND. We pre-flight check for it before calling rclone.
+
 Exit codes — chosen so the systemd OnFailure= handler only fires when
 something actually went wrong:
   0  — every step succeeded, or cloud sync was skipped because we're offline.
@@ -320,6 +327,26 @@ def borg_secret_present() -> bool:
     return bool(os.environ.get("BORG_PASSPHRASE") or os.environ.get("BORG_PASSCOMMAND"))
 
 
+def rclone_secret_present() -> bool:
+    """True if rclone has *some* way to obtain the config passphrase.
+
+    Mirrors borg_secret_present() exactly — same threat model, same
+    LoadCredential= pattern in the systemd unit. rclone accepts
+    RCLONE_CONFIG_PASS (literal) *or* RCLONE_PASSWORD_COMMAND (a shell
+    command whose stdout is the passphrase). The unit uses the latter
+    so the secret only ever lives in $CREDENTIALS_DIRECTORY.
+
+    We need this only when we're about to call rclone — `borg`-only
+    runs (e.g. on a machine that's offline) don't require it. Hence
+    sync() checks this *after* network_up() returns True, not in the
+    top-level pre-flight block.
+    """
+    return bool(
+        os.environ.get("RCLONE_CONFIG_PASS")
+        or os.environ.get("RCLONE_PASSWORD_COMMAND")
+    )
+
+
 # --- Pipeline steps ----------------------------------------------------------
 
 
@@ -476,6 +503,21 @@ def sync() -> int:
             # catch up the next time the timer fires with connectivity.
             log.info("offline — local snapshot retained, cloud sync deferred")
             return EXIT_OK
+
+        # rclone.conf is encrypted (it's now Syncthing-shared across
+        # machines), so rclone needs the passphrase. The systemd unit
+        # supplies it via LoadCredential= + RCLONE_PASSWORD_COMMAND.
+        # We check here rather than in the top-level pre-flight so
+        # offline runs aren't penalised for a missing rclone secret —
+        # they don't reach this code path. Failing fast and clearly
+        # beats letting rclone error out three times with a cryptic
+        # "couldn't decrypt config" line buried in transfer output.
+        if not rclone_secret_present():
+            log.error(
+                "RCLONE_CONFIG_PASS / RCLONE_PASSWORD_COMMAND not set; "
+                "refusing to call rclone against an encrypted config"
+            )
+            return EXIT_REMOTE_FAILURE
 
         # Try every remote, even if one fails — partial offsite redundancy
         # is better than none. Collect names for the summary line.
