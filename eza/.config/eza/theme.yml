@@ -1,0 +1,84 @@
+# eza theme — Adwaita darker
+# Palette is meant to match the local terminal's ANSI palette.
+
+filekinds:
+  directory: { foreground: "#62a0ea", is_bold: true }
+  symlink: { foreground: "#93ddc2" }
+  executable: { foreground: "#57e389", is_bold: true }
+  pipe: { foreground: "#ff7800" }
+  socket: { foreground: "#ed333b" }
+  block_device: { foreground: "#9141ac" }
+  char_device: { foreground: "#9141ac" }
+
+perms:
+  user_read: { foreground: "#ff7800" }
+  user_write: { foreground: "#ed333b", is_bold: true }
+  user_execute: { foreground: "#57e389", is_bold: true }
+  group_read: { foreground: "#ffa348" }
+  group_write: { foreground: "#f66151" }
+  group_execute: { foreground: "#8ff0a4" }
+  other_read: { foreground: "#ffa348" }
+  other_write: { foreground: "#f66151" }
+  other_execute: { foreground: "#8ff0a4" }
+  special_user_file: { foreground: "#dc8add" }
+  special_other_file: { foreground: "#dc8add" }
+  attribute_set: { foreground: "#5bc8af" }
+
+size:
+  number: { foreground: "#deddda" }
+  unit: { foreground: "#9a9996" }
+
+date:
+  foreground: "#b0afac"
+
+git:
+  new: { foreground: "#57e389" }
+  modified: { foreground: "#ff7800" }
+  deleted: { foreground: "#ed333b" }
+  renamed: { foreground: "#5bc8af" }
+  typechange: { foreground: "#9141ac" }
+  ignored: { foreground: "#9a9996" }
+  conflicted: { foreground: "#ed333b", is_bold: true }
+
+filenames:
+  .gitignore: { foreground: "#9a9996" }
+  .gitconfig: { foreground: "#9a9996" }
+  .zshrc: { foreground: "#62a0ea" }
+  .bashrc: { foreground: "#62a0ea" }
+  package.json: { foreground: "#ff7800" }
+  Cargo.toml: { foreground: "#ff7800" }
+  go.mod: { foreground: "#ff7800" }
+
+extensions:
+  # Archives
+  zip: { foreground: "#ed333b" }
+  tar: { foreground: "#ed333b" }
+  gz: { foreground: "#ed333b" }
+  7z: { foreground: "#ed333b" }
+  rar: { foreground: "#ed333b" }
+
+  # Documents
+  md: { foreground: "#62a0ea" }
+  pdf: { foreground: "#ed333b" }
+  txt: { foreground: "#b0afac" }
+
+  # Images
+  jpg: { foreground: "#5bc8af" }
+  jpeg: { foreground: "#5bc8af" }
+  png: { foreground: "#5bc8af" }
+  svg: { foreground: "#5bc8af" }
+  gif: { foreground: "#5bc8af" }
+
+  # Programming
+  py: { foreground: "#ff7800" }
+  js: { foreground: "#ffa348" }
+  ts: { foreground: "#62a0ea" }
+  rs: { foreground: "#ed333b" }
+  go: { foreground: "#5bc8af" }
+  lua: { foreground: "#62a0ea" }
+  sh: { foreground: "#57e389" }
+  zsh: { foreground: "#57e389" }
+  c: { foreground: "#5bc8af" }
+  cpp: { foreground: "#5bc8af" }
+  h: { foreground: "#93ddc2" }
+  hpp: { foreground: "#93ddc2" }

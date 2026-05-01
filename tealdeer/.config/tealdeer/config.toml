@@ -1,0 +1,15 @@
+[display]
+compact = true
+use_pager = false
+
+[updates]
+auto_update = true
+auto_update_interval_hours = 168
+
+# Colors resolve to the local terminal's ANSI palette.
+[style]
+description = { foreground = "white" }
+command_name = { foreground = "blue", bold = true }
+example_text = { foreground = "white" }
+example_code = { foreground = "cyan" }
+example_variable = { foreground = "yellow", italic = true }

@@ -1,0 +1,87 @@
+# Catppuccin Mocha theme for btop
+# Main background, empty for terminal default
+theme[main_bg]="#1E1E2E"
+
+# Main text color
+theme[main_fg]="#CDD6F4"
+
+# Title color for boxes
+theme[title]="#CDD6F4"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="#F38BA8"
+
+# Background color of selected item in lists
+theme[selected_bg]="#45475A"
+
+# Foreground color of selected item in lists
+theme[selected_fg]="#89B4FA"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#7F849C"
+
+# Color of graph points
+theme[graph_text]="#F5E0DC"
+
+# Misc colors for processes box including mini cpu graphs, details and return buttons
+theme[proc_misc]="#F5E0DC"
+
+# Cpu box outline color
+theme[cpu_box]="#94E2D5"
+
+# Memory box outline color
+theme[mem_box]="#A6E3A1"
+
+# Net box outline color
+theme[net_box]="#FAB387"
+
+# Processes box outline color
+theme[proc_box]="#89B4FA"
+
+# Box divider line and small boxes line color
+theme[div_line]="#6C7086"
+
+# Temperature graph colors
+theme[temp_start]="#F9E2AF"
+theme[temp_mid]="#FAB387"
+theme[temp_end]="#F38BA8"
+
+# CPU graph colors
+theme[cpu_start]="#94E2D5"
+theme[cpu_mid]="#89DCEB"
+theme[cpu_end]="#89B4FA"
+
+# Mem graph colors
+theme[free_start]="#A6E3A1"
+theme[free_mid]="#94E2D5"
+theme[free_end]="#89DCEB"
+
+# Cached graph colors
+theme[cached_start]="#F9E2AF"
+theme[cached_mid]="#FAB387"
+theme[cached_end]="#F38BA8"
+
+# Available graph colors
+theme[available_start]="#F5E0DC"
+theme[available_mid]="#F2CDCD"
+theme[available_end]="#F5C2E7"
+
+# Used graph colors
+theme[used_start]="#A6E3A1"
+theme[used_mid]="#94E2D5"
+theme[used_end]="#89DCEB"
+
+# Download graph colors
+theme[download_start]="#B4BEFE"
+theme[download_mid]="#89B4FA"
+theme[download_end]="#74C7EC"
+
+# Upload graph colors
+theme[upload_start]="#CBA6F7"
+theme[upload_mid]="#F5C2E7"
+theme[upload_end]="#EBA0AC"
+
+# Process tree line colors
+theme[process_start]="#94E2D5"
+theme[process_mid]="#89B4FA"
+theme[process_end]="#CBA6F7"
