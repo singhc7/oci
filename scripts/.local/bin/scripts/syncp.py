@@ -65,7 +65,7 @@ KEEPASS_DB = Path("~/vault/Vault.kdbx").expanduser()
 # rclone remote names (configured via `rclone config`). Each remote
 # receives a full mirror of LOCAL_REPO under `BorgBackup/`. Tuple, not
 # list — this is configuration, not state, so it shouldn't be mutable.
-REMOTES = ("gdrive", "mgdrive", "onedrive")
+REMOTES = ("gdrive", "mgdrive", "onedrive", "ocilocal")
 
 # Archive name for this run, e.g. "keepass-2026-04-27T10-42-11".
 # Note the dashes in the time portion: ISO 8601 uses colons, but colons
@@ -288,7 +288,9 @@ def repo_looks_healthy() -> bool:
     if file_count < REPO_MIN_FILES:
         log.error(
             "repo health: only %d entries under %s (< %d) — refusing cloud sync",
-            file_count, LOCAL_REPO, REPO_MIN_FILES,
+            file_count,
+            LOCAL_REPO,
+            REPO_MIN_FILES,
         )
         return False
     return True
