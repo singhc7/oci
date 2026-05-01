@@ -1,0 +1,41 @@
+# =========================
+# Security & Secrets
+# =========================
+rclone.conf
+*.kdbx
+*.kdb
+cert.pem
+key.pem
+id_rsa*
+id_ed25519*
+gh/hosts.yml
+.ssh/
+.gnupg/
+
+# =========================
+# OS / Environment Junk
+# =========================
+# macOS creates these hidden indexing files automatically
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# =========================
+# Caches & temporary files
+# =========================
+*.bak
+*.log
+*.swp
+*~
+.viminfo
+.zsh_plugins.zsh
+
+# =========================
+# Tool Specific Caches
+# =========================
+# nnn: Ignore backups, bookmarks, sessions, and last directory
+nnn/.config/nnn/*.tar.gz
+nnn/.config/nnn/sessions/
+nnn/.config/nnn/bookmarks/
+nnn/.config/nnn/.lastd

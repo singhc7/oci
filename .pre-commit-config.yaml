@@ -1,0 +1,19 @@
+# Pre-commit configuration for dotfiles
+# To install: pre-commit install
+# To run on all files: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files # Prevent giant binary files from being committed
+      - id: check-merge-conflict # Check for files that contain merge conflict strings
+      - id: check-vcs-permalinks # Ensure that links to vcs websites are permalinks
+      - id: end-of-file-fixer # Ensure files end in a newline
+      - id: trailing-whitespace # Remove trailing whitespace
+      - id: detect-private-key # Check for the existence of private keys
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
