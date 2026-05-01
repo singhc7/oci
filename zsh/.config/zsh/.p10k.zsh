@@ -17,6 +17,7 @@
 
   # ---------- Segments ----------
   typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+    context
     dir
     vcs
     newline
@@ -47,6 +48,19 @@
   typeset -g POWERLEVEL9K_PROMPT_CHAR_{OK,ERROR}_VIVIS_CONTENT_EXPANSION='V'
   typeset -g POWERLEVEL9K_PROMPT_CHAR_{OK,ERROR}_VIOWR_CONTENT_EXPANSION='▶'
   typeset -g POWERLEVEL9K_PROMPT_CHAR_LEFT_PROMPT_LAST_SEGMENT_END_SYMBOL=''
+
+  # ---------- Context (OCI host badge) ----------
+  # Solid orange "oci" pill at the front of the prompt. Always visible so the
+  # SSH session looks unmistakably different from the local machine's prompt.
+  typeset -g POWERLEVEL9K_ALWAYS_SHOW_CONTEXT=true
+  typeset -g POWERLEVEL9K_ALWAYS_SHOW_USER=true
+  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE=' oci '
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE=' oci root '
+  typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO,REMOTE,REMOTE_SUDO}_FOREGROUND=16
+  typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO,REMOTE,REMOTE_SUDO}_BACKGROUND=208
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=16
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND=203
+  typeset -g POWERLEVEL9K_CONTEXT_VISUAL_IDENTIFIER_EXPANSION=
 
   # ---------- Directory ----------
   typeset -g POWERLEVEL9K_DIR_FOREGROUND=25
