@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+
+# Description: Move selected files to trash
+# Dependencies: trash-cli
+
+if ! type trash-put >/dev/null 2>&1; then
+    echo "trash-cli is not installed."
+    read -r _
+    exit 1
+fi
+
+if [ -z "$1" ]; then
+    echo "No file selected."
+    read -r _
+    exit 1
+fi
+
+# trash-put can handle multiple files
+trash-put "$@"
