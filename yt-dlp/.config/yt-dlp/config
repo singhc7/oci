@@ -1,0 +1,59 @@
+# --- FORMAT SELECTION ---
+
+# Explicitly exclude AV1 (av01) and prefer VP9/H.264
+# This ensures AV1 is NEVER downloaded even if it's the highest resolution available.
+-f "bestvideo[vcodec!*=av01]+bestaudio/best"
+
+# Sort priority: VP9 > H.264 > Resolution > Frame Rate
+-S "vcodec:vp9,vcodec:h264,res,fps"
+
+# --- PERFORMANCE ---
+
+# Download up to 5 fragments concurrently for significantly faster downloads
+--concurrent-fragments 5
+
+# --- SPONSORBLOCK ---
+
+# Mark sponsor segments as chapters (doesn't cut them, but lets you skip)
+--sponsorblock-mark all
+
+# --- METADATA & ARCHIVING ---
+
+# Embed the thumbnail as the file icon
+--embed-thumbnail
+
+# Embed metadata (upload date, description, uploader name)
+--embed-metadata
+
+# Embed chapters (if the video has them)
+--embed-chapters
+
+# --- SUBTITLES ---
+
+# Download English subtitles (manual and auto-generated)
+--write-sub
+--write-auto-sub
+--sub-lang "en.*,en-US"
+
+# Embed them into the container
+--embed-subs
+
+# If subtitles fail (e.g., 429), skip them but keep the video
+--ignore-errors
+
+# Sleep briefly between subtitle requests to avoid IP rate-limiting
+--sleep-subtitles 2
+
+# --- FILENAMES & CLEANUP ---
+
+# Rename files to: "Title [Resolution] [ID].ext"
+# Restrict characters to ASCII-only for maximum compatibility
+--restrict-filenames
+-o "%(title)s [%(height)s] [%(id)s].%(ext)s"
+
+# Keep the native WebM container (YouTube standard for VP9)
+# Do not convert/merge unless necessary.
+--prefer-free-formats
+
+# Remove any cached files to keep it clean
+--rm-cache-dir
