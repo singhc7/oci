@@ -1,0 +1,40 @@
+# .bashrc.linux
+
+# --- NNN CONFIGURATION ---
+# 1. Plugins
+# o: fzopen (fuzzy search)
+# n: nuke (smart opener)
+# r: rclone (loads rclone to mount cloud drives)
+# z: zoxide (uses autojump feature from zoxide)
+# m: nmount to mount physical drives
+# t: t will be safe trash
+export NNN_PLUG='o:fzopen;n:nuke;r:rclone;m:nmount;z:autojump;t:trash'
+
+# 2. General Settings
+export NNN_OPTS="adeH"          # detail mode, use EDITOR, show hidden
+export NNN_ICONS=1
+export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
+
+# 3. CD on Quit Function (Bash Version)
+n() {
+    # Block nesting of nnn in subshells
+    if [ -n "$NNNLVL" ] && [ "${NNNLVL:-0}" -ge 1 ]; then
+        echo "nnn is already running"
+        return
+    fi
+
+    # Run nnn
+    nnn "$@"
+
+    # On exit, read the tempfile and cd if it exists
+    if [ -f "$NNN_TMPFILE" ]; then
+        . "$NNN_TMPFILE"
+        rm -f "$NNN_TMPFILE" >/dev/null
+    fi
+}
+
+# --- Aliases ---
+# 1. Full system upgrade (apt)
+alias upsystem='sudo apt update && sudo apt full-upgrade'
+# 2. Remove orphan packages and clean cache
+alias clsystem='sudo apt autoremove --purge && sudo apt autoclean'
