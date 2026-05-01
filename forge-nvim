@@ -70,9 +70,16 @@ install_neovim_from_github() {
         aarch64) asset='nvim-linux-arm64.tar.gz' ;;
         *) echo "  Unsupported arch: $arch" >&2; return 1 ;;
     esac
-    url="https://github.com/neovim/neovim/releases/latest/download/$asset"
+    # Use the `stable` tag, NOT `releases/latest/download/`. GitHub's
+    # auto-"latest" pointer on neovim/neovim has historically drifted to
+    # releases that pre-date the `nvim-linux-{x86_64,arm64}.tar.gz` asset
+    # rename — curl either 404s or fetches a pre-0.10 build, which is
+    # what was happening on this aarch64 OCI box. The `stable` tag is
+    # moved by the maintainers on each stable cut and is what neovim's
+    # own install instructions recommend.
+    url="https://github.com/neovim/neovim/releases/download/stable/$asset"
     tmp=$(mktemp -d) || return 1
-    echo "  Downloading $asset..."
+    echo "  Downloading $asset from neovim stable..."
     if ! curl -fsSL --connect-timeout 15 --retry 2 -o "$tmp/$asset" "$url"; then
         rm -rf "$tmp"
         return 1
@@ -92,18 +99,27 @@ install_neovim_from_github() {
     mv "$extracted" "$HOME/.local/share/nvim-prebuilt"
     ln -sf "$HOME/.local/share/nvim-prebuilt/bin/nvim" "$HOME/.local/bin/nvim"
     rm -rf "$tmp"
+    # Bash caches command -> path lookups. If apt's older nvim was on
+    # PATH before this run, the cached entry still wins until cleared,
+    # which makes the version check below report the stale binary.
+    hash -r 2>/dev/null || true
 }
 
 if nvim_is_recent_enough; then
     echo "nvim already at $(nvim --version | head -1) — skipping reinstall."
 else
     echo "Installing latest nvim from GitHub release into ~/.local..."
-    if install_neovim_from_github; then
+    if install_neovim_from_github && nvim_is_recent_enough; then
         echo "  Installed: $(nvim --version | head -1)"
     else
-        echo "  GitHub fetch failed — keeping whatever nvim is already on PATH." >&2
-        echo "  The Lazy/Mason sync below needs nvim >= 0.${NVIM_MIN_MINOR}." >&2
-        echo "  Re-run forge-nvim once the network is reachable." >&2
+        echo "  Did not end up with nvim >= 0.${NVIM_MIN_MINOR} on PATH." >&2
+        if command -v nvim >/dev/null 2>&1; then
+            echo "  Current nvim: $(command -v nvim) ($(nvim --version 2>/dev/null | head -1))" >&2
+        else
+            echo "  No nvim on PATH." >&2
+        fi
+        echo "  The Lazy/Mason sync below will be skipped — re-run forge-nvim" >&2
+        echo "  once the network is reachable." >&2
     fi
 fi
 
