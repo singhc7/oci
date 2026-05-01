@@ -174,40 +174,38 @@ whatever comes next):
 ## systemd integration for the encrypted rclone config
 
 `syncp.py` runs unattended on OCI and shells out to `rclone`. Once
-`rclone.conf` is encrypted, rclone needs the passphrase. We use the
-same `LoadCredential=` pattern already in place for `BORG_PASSPHRASE`
-so the secret never sits in the unit environment in plaintext.
+`rclone.conf` is encrypted, rclone needs the passphrase. The syncp
+service unit already loads `BORG_PASSPHRASE` from a 0600 KEY=VALUE
+file via `EnvironmentFile=` — append the rclone passphrase to the
+same file and you're done. rclone reads `RCLONE_CONFIG_PASS` from
+its environment natively, and `syncp.py`'s pre-flight check refuses
+to call rclone without it.
 
-Add to the syncp `.service` unit (alongside the existing borg
-credential lines):
-
-```ini
-[Service]
-LoadCredential=rclone-passphrase:%h/.config/syncp/rclone-passphrase
-Environment=RCLONE_PASSWORD_COMMAND=cat %d/rclone-passphrase
-```
-
-  - `LoadCredential=rclone-passphrase:<source>` — systemd reads the
-    file at `<source>` once at unit start and exposes it inside the
-    unit's private credentials directory. `<source>` should be a
-    0600 file on the OCI box owned by the same user the unit runs as,
-    containing only the rclone passphrase (no trailing newline is
-    fine — `cat` will pass any newline through unchanged, and rclone
-    is permissive about it).
-  - `Environment=RCLONE_PASSWORD_COMMAND=cat %d/rclone-passphrase` —
-    `%d` is systemd's specifier for `$CREDENTIALS_DIRECTORY`, the
-    runtime path where `LoadCredential=` materialised the secret.
-    Rclone runs this command and uses stdout as the config password.
-
-After editing the unit:
+The minimum change (no unit edit needed):
 
 ```sh
+# Append to whatever file the syncp unit's EnvironmentFile= points at
+# (default in this repo's notes: ~/.secrets/borg.env, mode 0600).
+printf 'RCLONE_CONFIG_PASS=%s\n' 'your-passphrase' >> ~/.secrets/borg.env
+chmod 600 ~/.secrets/borg.env  # belt-and-braces
+
 systemctl --user daemon-reload
 systemctl --user restart syncp.service
 journalctl --user -u syncp.service -f   # watch the next run
 ```
 
-`syncp.py` itself enforces this: a pre-flight check refuses to call
-rclone if neither `RCLONE_CONFIG_PASS` nor `RCLONE_PASSWORD_COMMAND`
-is in the environment, mirroring the existing `BORG_PASSPHRASE` /
-`BORG_PASSCOMMAND` check.
+**Optional rename for clarity.** The env file now holds two tools'
+secrets, so `borg.env` is misleading:
+
+```sh
+mv ~/.secrets/borg.env ~/.secrets/syncp.env
+# then update the unit:  EnvironmentFile=%h/.secrets/syncp.env
+# and reload:            systemctl --user daemon-reload
+```
+
+**Trade-off of `EnvironmentFile=`.** Both passphrases are visible in
+`/proc/<pid>/environ` to the running user (and root). That's fine on
+a single-user box; on shared hardware, switch to `LoadCredential=`
+plus `BORG_PASSCOMMAND` / `RCLONE_PASSWORD_COMMAND`, which keeps the
+secret in `$CREDENTIALS_DIRECTORY` and out of the process env. The
+syncp pre-flight accepts either form, so the script doesn't change.

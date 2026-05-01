@@ -13,17 +13,18 @@ What this script does, in order:
   7. `rclone sync`     — mirror the local repo to each cloud remote.
 
 Designed to run unattended via a systemd timer. The systemd unit (kept
-locally, not in this repo) loads BORG_PASSPHRASE through systemd's
-LoadCredential= so the secret never sits in the unit environment in
-plaintext; the script reads BORG_PASSCOMMAND, which Borg supports
-natively.
+locally, not in this repo) sources BORG_PASSPHRASE — and, now that
+rclone.conf is encrypted and Syncthing-shared across machines (see
+syncthing/README.md), RCLONE_CONFIG_PASS — from a single 0600
+KEY=VALUE file via systemd's EnvironmentFile= directive. Borg and
+rclone each pick up their respective env var natively; no PASSCOMMAND
+indirection is needed.
 
-The same pattern applies to the rclone configuration passphrase once
-`rclone.conf` is encrypted (it is, because the config is now shared
-across machines via Syncthing — see syncthing/README.md). The unit
-loads the passphrase via a second LoadCredential= line and exposes it
-to rclone through RCLONE_PASSWORD_COMMAND, rclone's native equivalent
-of BORG_PASSCOMMAND. We pre-flight check for it before calling rclone.
+Trade-off of the EnvironmentFile= approach: the secrets are visible
+in /proc/<pid>/environ to the running user (and root). Fine on a
+single-user laptop; on a shared box, swap to LoadCredential= plus the
+BORG_PASSCOMMAND / RCLONE_PASSWORD_COMMAND variants so the secret
+only ever lives in $CREDENTIALS_DIRECTORY.
 
 Exit codes — chosen so the systemd OnFailure= handler only fires when
 something actually went wrong:
@@ -330,11 +331,14 @@ def borg_secret_present() -> bool:
 def rclone_secret_present() -> bool:
     """True if rclone has *some* way to obtain the config passphrase.
 
-    Mirrors borg_secret_present() exactly — same threat model, same
-    LoadCredential= pattern in the systemd unit. rclone accepts
+    Mirrors borg_secret_present() — same threat model, same
+    EnvironmentFile= mechanism in the systemd unit. rclone accepts
     RCLONE_CONFIG_PASS (literal) *or* RCLONE_PASSWORD_COMMAND (a shell
-    command whose stdout is the passphrase). The unit uses the latter
-    so the secret only ever lives in $CREDENTIALS_DIRECTORY.
+    command whose stdout is the passphrase). The unit uses the literal
+    form because EnvironmentFile= injects KEY=VALUE pairs straight
+    into the environment; we still accept either here so this check
+    keeps working if a future, more locked-down setup switches to
+    LoadCredential= + RCLONE_PASSWORD_COMMAND.
 
     We need this only when we're about to call rclone — `borg`-only
     runs (e.g. on a machine that's offline) don't require it. Hence
