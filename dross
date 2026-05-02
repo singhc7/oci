@@ -36,7 +36,7 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 cat <<'EOF'
-unforge will:
+dross will:
   * purge userland apt packages (tmux, neovim, ripgrep, ...)
   * uninstall every brew formula forge installs (brew itself stays)
   * unstow dotfiles and drop ~/.antidote, nvim caches, local shims
