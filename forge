@@ -68,7 +68,6 @@ BREW_PACKAGES=(
 PACKAGESTOSTOW=(
     'aria2'
     'bash'
-    'btop'
     'eza'
     'fzf'
     'git'
