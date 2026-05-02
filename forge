@@ -6,9 +6,11 @@ set -euo pipefail
 # Assumes the repo is already cloned to ~/dotfiles and that `git` and
 # `stow` are available (the `bootstrap` block below installs them if not).
 #
+# apt is reserved strictly for system binaries (build chain, login shell,
+# system Python, Homebrew prerequisites). Every userland CLI tool ships
+# from Homebrew so we get fresh releases regardless of Ubuntu version.
+#
 # Tested on Ubuntu 24.04 LTS (OCI Always Free aarch64/amd64 shapes).
-# Should also work on 22.04, but a few packages (btop, eza, tealdeer)
-# will be missing from the default repos there.
 
 if ! command -v apt-get >/dev/null 2>&1; then
     echo "apt-get not found — this script targets Ubuntu/Debian. Aborting." >&2
@@ -16,35 +18,46 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 # --- Packages ---------------------------------------------------------------
-# Headless server set: shells, tooling, editor, and a few CLI utilities.
-# GUI/Wayland apps live in the Arch dotfiles repo, not here.
+# Split into two groups:
+#   * apt — strictly system binaries: bootstrap toolchain, login shells, the
+#     system Python stack, and Homebrew's own prerequisites.
+#   * brew — every other userland CLI tool. Homebrew gives us fresher releases
+#     than Ubuntu's archive (24.04 has stale btop/eza/tealdeer, 22.04 is even
+#     further behind) and a single source of truth for non-system tooling.
 APT_PACKAGES=(
-    # Core tooling
+    # Bootstrap toolchain
     'git'
     'stow'
     'curl'
     'ca-certificates'
     'build-essential'
     'unzip'
-    # Shells & multiplexer
+    # Homebrew install prerequisites (in addition to the bootstrap set above)
+    'procps'
+    'file'
+    # Login shell
     'zsh'
-    'tmux'
-    # Editor & language tooling
-    'neovim'
+    # System Python stack
     'python3-pip'
     'python3-venv'
     'pipx'
+)
+
+BREW_PACKAGES=(
+    # Multiplexer & editor
+    'tmux'
+    'neovim'
     # CLI productivity
     'aria2'
-    'bat'     # binary is `batcat` on Ubuntu — symlinked below
-    'btop'    # 24.04+; 22.04 ships an older version, install will still succeed
-    'eza'     # 24.04+; on 22.04 `apt install` will fail — see fallback below
-    'fd-find' # binary is `fdfind` on Ubuntu — symlinked below
+    'bat'
+    'btop'
+    'eza'
+    'fd'
     'fzf'
     'jq'
     'nnn'
     'ripgrep'
-    'tealdeer' # 24.04+; on 22.04 falls back to cargo if available
+    'tealdeer'
     'yt-dlp'
     'zoxide'
     # Backup / sync
@@ -84,15 +97,35 @@ sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}" || {
     done
 }
 
-# `bat` and `fd` ship under different binary names on Ubuntu to avoid
-# clashing with existing tools. Add user-local symlinks so configs that
-# reference `bat`/`fd` (e.g. fzf preview) work without forking.
 mkdir -p "$HOME/.local/bin"
-if [[ -x /usr/bin/batcat && ! -e "$HOME/.local/bin/bat" ]]; then
-    ln -s /usr/bin/batcat "$HOME/.local/bin/bat"
+
+# --- Homebrew ---------------------------------------------------------------
+# Userland tools come from brew (see comment on BREW_PACKAGES above). Install
+# is idempotent — we skip if `brew` is already on PATH or the linuxbrew prefix
+# already exists.
+if ! command -v brew >/dev/null 2>&1 && [[ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+    echo "Installing Homebrew..."
+    NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
-if [[ -x /usr/bin/fdfind && ! -e "$HOME/.local/bin/fd" ]]; then
-    ln -s /usr/bin/fdfind "$HOME/.local/bin/fd"
+
+# Make brew available in this script's process so the install loop below
+# works on the very first `forge` run, before the shell rcs are stowed.
+if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
+if command -v brew >/dev/null 2>&1; then
+    echo "Installing brew packages..."
+    brew install "${BREW_PACKAGES[@]}" || {
+        echo "One or more brew packages failed; retrying individually..."
+        for pkg in "${BREW_PACKAGES[@]}"; do
+            brew install "$pkg" || echo "  skipped: $pkg"
+        done
+    }
+else
+    echo "brew not on PATH after install attempt — skipping brew packages." >&2
+    echo "Re-run forge once Homebrew is reachable." >&2
 fi
 
 # --- Symlink dotfiles -------------------------------------------------------

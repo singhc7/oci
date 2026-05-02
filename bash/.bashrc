@@ -3,6 +3,13 @@
 # ==========================================
 # 1. Environment Variables & PATH
 # ==========================================
+# Homebrew (linuxbrew) — loaded before the user-local PATH export below so
+# `~/.local/bin` and `~/.npm-global/bin` still win (brew shellenv prepends,
+# and our subsequent prepend lands ahead of it).
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+fi
+
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
 export EDITOR='nvim'
 export VISUAL='nvim'
