@@ -2,9 +2,10 @@
 # Functions
 # ==========================================
 
-# --- upsystem: full apt upgrade ---
+# --- upsystem: full apt + brew upgrade ---
 upsystem() {
     sudo apt update && sudo apt full-upgrade
+    brew update && brew upgrade
 }
 
 # --- clsystem: remove orphans + purge residual configs + clean cache ---
