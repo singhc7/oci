@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Reset a forge'd OCI instance back to an updated-but-pristine Ubuntu baseline
+# so the next `./forge` rebuilds everything from brew.
+#
+# Removes:
+#   * Userland apt packages that forge used to pull in (now sourced from brew)
+#     plus the nvim toolchain forge-nvim layers on top.
+#   * Every brew formula listed in forge's BREW_PACKAGES, then `brew autoremove`
+#     to clear unused dependencies. Homebrew itself is left installed.
+#   * Stowed dotfile symlinks via `stow -D` (the source tree at ~/dotfiles is
+#     left alone — that's where forge runs from).
+#   * Local install caches forge / forge-nvim populate:
+#       ~/.antidote
+#       ~/.local/share/nvim-prebuilt
+#       ~/.local/share/nvim, ~/.local/state/nvim, ~/.cache/nvim
+#       ~/.local/bin/{bat,fd,nvim,node,tree-sitter}
+#
+# Does NOT touch:
+#   * Homebrew itself (the user installed it out-of-band; forge would just
+#     skip a re-install anyway).
+#   * ~/dotfiles, ~/.ssh, ~/.config/* outside the stowed packages, user data
+#     under ~/.local/pipx or ~/.npm-global.
+#   * System Python, build-essential, ca-certificates, etc.
+#
+# Resets the login shell to bash before purging zsh so the chsh in the next
+# `forge` run has a clean slate.
+#
+# Finishes with `apt update && full-upgrade && autoremove` so you land on a
+# patched system, ready to run `./forge`.
+
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get not found — this script targets Ubuntu/Debian. Aborting." >&2
+    exit 1
+fi
+
+cat <<'EOF'
+unforge will:
+  * purge userland apt packages (tmux, neovim, ripgrep, ...)
+  * uninstall every brew formula forge installs (brew itself stays)
+  * unstow dotfiles and drop ~/.antidote, nvim caches, local shims
+  * reset login shell to bash, then full-upgrade the system
+
+It will NOT remove Homebrew, ~/dotfiles, or your home data outside the
+paths above.
+EOF
+read -rp "Continue? [y/N] " ans
+[[ ${ans:-} =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+
+# --- Login shell back to bash ----------------------------------------------
+# Done first so we can safely purge zsh below without leaving the user's
+# /etc/passwd entry pointing at a binary that's about to disappear.
+if command -v bash >/dev/null 2>&1 && [[ "$(getent passwd "$USER" | cut -d: -f7)" != *bash ]]; then
+    echo "Resetting login shell to bash..."
+    sudo chsh -s "$(command -v bash)" "$USER" || true
+fi
+
+# --- Unstow dotfiles --------------------------------------------------------
+# Run before purging packages so `stow` is still available; falls back to a
+# manual symlink sweep if stow has already been removed for some reason.
+if [[ -d "$HOME/dotfiles" ]]; then
+    PACKAGESTOSTOW=(
+        aria2 bash btop eza fzf git neovim nnn scripts tealdeer tmux yt-dlp zsh
+    )
+    if command -v stow >/dev/null 2>&1; then
+        echo "Unstowing dotfiles..."
+        ( cd "$HOME/dotfiles" && stow -D "${PACKAGESTOSTOW[@]}" 2>/dev/null || true )
+    fi
+fi
+
+# --- Userland apt packages --------------------------------------------------
+# Anything that should now live under brew, plus the nvim toolchain that
+# forge-nvim layers on (node/npm/jre/rg/fd). System bootstrap packages
+# (build-essential, curl, ca-certificates, python3-*, pipx, git, stow, unzip)
+# are left in place — those are still apt's job.
+APT_PURGE=(
+    aria2
+    bat
+    borgbackup
+    btop
+    default-jre-headless
+    eza
+    fd-find
+    fzf
+    jq
+    neovim
+    nnn
+    nodejs
+    npm
+    rclone
+    ripgrep
+    tealdeer
+    tmux
+    yt-dlp
+    zoxide
+    zsh
+)
+
+INSTALLED=()
+for pkg in "${APT_PURGE[@]}"; do
+    if dpkg -s "$pkg" >/dev/null 2>&1; then
+        INSTALLED+=("$pkg")
+    fi
+done
+
+if (( ${#INSTALLED[@]} )); then
+    echo "Purging ${#INSTALLED[@]} apt package(s): ${INSTALLED[*]}"
+    sudo apt-get purge -y "${INSTALLED[@]}"
+else
+    echo "No userland apt packages to purge."
+fi
+
+# --- Brew formulae ----------------------------------------------------------
+# Mirror the BREW_PACKAGES list in `forge`. Keeping this in sync by hand is
+# cheaper than parsing forge's bash array.
+BREW_PURGE=(
+    aria2
+    bat
+    borgbackup
+    btop
+    eza
+    fd
+    fzf
+    jq
+    neovim
+    nnn
+    rclone
+    ripgrep
+    tealdeer
+    tmux
+    yt-dlp
+    zoxide
+)
+
+if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]] && ! command -v brew >/dev/null 2>&1; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
+if command -v brew >/dev/null 2>&1; then
+    BREW_INSTALLED=()
+    while IFS= read -r line; do
+        BREW_INSTALLED+=("$line")
+    done < <(brew list --formula --full-name 2>/dev/null || true)
+
+    BREW_TO_REMOVE=()
+    for pkg in "${BREW_PURGE[@]}"; do
+        for have in "${BREW_INSTALLED[@]}"; do
+            [[ "$have" == "$pkg" ]] && BREW_TO_REMOVE+=("$pkg") && break
+        done
+    done
+
+    if (( ${#BREW_TO_REMOVE[@]} )); then
+        echo "Uninstalling ${#BREW_TO_REMOVE[@]} brew formula(e): ${BREW_TO_REMOVE[*]}"
+        brew uninstall --force "${BREW_TO_REMOVE[@]}" || true
+    else
+        echo "No brew formulae to uninstall."
+    fi
+
+    echo "Pruning unused brew dependencies..."
+    brew autoremove || true
+else
+    echo "brew not on PATH — skipping brew uninstall step."
+fi
+
+# --- Local install caches ---------------------------------------------------
+echo "Removing forge / forge-nvim caches and local shims..."
+rm -rf \
+    "$HOME/.antidote" \
+    "$HOME/.local/share/nvim-prebuilt" \
+    "$HOME/.local/share/nvim" \
+    "$HOME/.local/state/nvim" \
+    "$HOME/.cache/nvim"
+
+for shim in bat fd nvim node tree-sitter; do
+    rm -f "$HOME/.local/bin/$shim"
+done
+
+# --- Final apt cleanup + system patch ---------------------------------------
+echo "Removing orphans and patching the system..."
+sudo apt-get autoremove --purge -y
+sudo apt-get autoclean -y
+sudo apt-get update
+sudo apt-get -y full-upgrade
+
+echo
+echo "Pristine. Run ./forge to rebuild."
