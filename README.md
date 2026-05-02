@@ -67,6 +67,21 @@ followed by `:MasonToolsInstallSync`. Verify with `:checkhealth` after.
 Log out and back in once it finishes so the new symlinks and shell take
 effect.
 
+## Tearing down
+
+`dross` reverses what `forge` and `forge-nvim` set up so the next
+`./forge` rebuilds from a pristine baseline:
+
+```bash
+./dross
+```
+
+It purges the userland apt packages and brew formulae forge installs,
+unstows the dotfiles, drops the Antidote / nvim caches and local shims,
+resets the login shell to bash, and finishes with a full system
+upgrade. Homebrew itself, `~/dotfiles`, `~/.ssh`, and unrelated home
+data are left untouched.
+
 ## Manual install
 
 If you'd rather skip `forge`, install `stow` and link only the packages
