@@ -10,12 +10,15 @@ export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 export EDITOR='nvim'
 export VISUAL='nvim'
 
+# --- Tell tools there's no browser, fail fast and quickly ---
+export BROWSER=true
+
 # --- Homebrew (linuxbrew) ---
 # Loaded before the user-local PATH exports below so those still take
 # precedence — `brew shellenv` prepends to PATH, so anything we prepend
 # afterwards lands ahead of brew.
 if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
+	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
 fi
 
 # --- Path Modifications ---
