@@ -31,6 +31,9 @@ export PATH="$HOME/.local/bin/scripts:$PATH"
 # --- npm global packages ---
 export PATH="$HOME/.npm-global/bin:$PATH"
 
+# --- rust toolchain ---
+export PATH="/home/linuxbrew/.linuxbrew/opt/rustup/bin:$PATH"
+
 # --- NNN Configuration ---
 # Plugins:
 # o: fzopen (fuzzy search)
