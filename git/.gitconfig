@@ -1,7 +1,7 @@
 [user]
 	name = Chahatpreet Singh
 	email = c@chahat.dev
-	signingkey = ~/.ssh/id_ed25519.pub
+	signingkey = ~/.ssh/id_ed25519
 [gpg]
 	format = ssh
 [commit]
@@ -36,6 +36,7 @@
 	conflictstyle = zdiff3
 [core]
 	editor = nvim
+	pager = delta
 [alias]
 	st = status -sb
 	co = checkout
