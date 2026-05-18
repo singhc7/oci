@@ -51,6 +51,7 @@ BREW_PACKAGES=(
     'aria2'
     'bat'
     'btop'
+    'git-delta'
     'eza'
     'fd'
     'fzf'
