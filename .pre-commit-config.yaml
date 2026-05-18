@@ -14,6 +14,6 @@ repos:
       - id: detect-private-key # Check for the existence of private keys
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.2
+    rev: v8.30.0
     hooks:
       - id: gitleaks
