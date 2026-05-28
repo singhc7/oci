@@ -2,6 +2,11 @@
 # Environment Variables & Exports
 # ==========================================
 
+# Load Nix Home Manager session variables
+if [ -f "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" ]; then
+  source "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+fi
+
 # --- SSH Agent (Manual Background Service) ---
 # Point SSH_AUTH_SOCK to the socket managed by the background ssh-agent.
 export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
@@ -13,14 +18,6 @@ export VISUAL='nvim'
 # --- Tell tools there's no browser, fail fast and quickly ---
 export BROWSER=true
 
-# --- Homebrew (linuxbrew) ---
-# Loaded before the user-local PATH exports below so those still take
-# precedence — `brew shellenv` prepends to PATH, so anything we prepend
-# afterwards lands ahead of brew.
-if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
-	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
-fi
-
 # --- Path Modifications ---
 # User local bin
 export PATH="$HOME/.local/bin:$PATH"
@@ -30,9 +27,6 @@ export PATH="$HOME/.local/bin/scripts:$PATH"
 
 # --- npm global packages ---
 export PATH="$HOME/.npm-global/bin:$PATH"
-
-# --- rust toolchain ---
-export PATH="/home/linuxbrew/.linuxbrew/opt/rustup/bin:$PATH"
 
 # --- NNN Configuration ---
 # Plugins:
