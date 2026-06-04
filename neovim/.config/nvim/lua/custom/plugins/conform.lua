@@ -40,6 +40,7 @@ return {
 				json = { "jq" },
 				yaml = { "prettier" },
 				markdown = { "prettier" },
+				nix = { "nixfmt" },
 			},
 		},
 	},
