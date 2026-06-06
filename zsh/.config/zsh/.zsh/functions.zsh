@@ -117,3 +117,9 @@ extract() {
         ;;
     esac
 }
+
+# --- gh helper functions ---
+# Search PR with title
+gps() {
+    gh pr ls --search "'$1' in:title" --state all --limit 20
+}
