@@ -123,3 +123,8 @@ extract() {
 gps() {
     gh pr ls --search "'$1' in:title" --state all --limit 20
 }
+
+# Create nix review runs
+ghr() {
+    gh workflow run review -R singhc7/nixpkgs-review-gha -f pr="$1"
+}
