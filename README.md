@@ -29,63 +29,7 @@ desktop dotfiles — no GUI, no Wayland, no audio/video tooling.
   archive and will be skipped).
 - An SSH user with `sudo`. On default OCI images that's `ubuntu`.
 
-## Bootstrap
-
-```bash
-sudo apt-get update && sudo apt-get install -y git stow
-git clone https://github.com/singhc7/oci ~/dotfiles
-cd ~/dotfiles
-./forge
-```
-
-`forge` will:
-
-1. `apt full-upgrade` the system.
-2. Install the headless package set with `--no-install-recommends`.
-3. Symlink `~/.local/bin/{bat,fd}` to Ubuntu's `batcat` / `fdfind` so
-   configs that reference the upstream binary names keep working.
-4. Run `stow -R` for every package above.
-5. Hand off to `./forge-nvim` to install the Neovim toolchain (PPA
-   neovim, node/npm, default-jre, tree-sitter CLI, etc.) and run a
-   headless Lazy + Mason sync.
-6. Install [Antidote](https://github.com/mattmc3/antidote) for zsh.
-7. `chsh` you to `zsh` if it isn't already your login shell.
-
-### Refreshing Neovim deps
-
-If Mason can't fetch a tool because a runtime is missing, re-run the
-nvim bootstrap on its own — it's idempotent:
-
-```bash
-./forge-nvim
-```
-
-It pre-stages everything Mason and `nvim-treesitter` need (node, java,
-gcc, tree-sitter CLI, ripgrep, fd) and triggers a headless `:Lazy sync`
-followed by `:MasonToolsInstallSync`. Verify with `:checkhealth` after.
-
-Log out and back in once it finishes so the new symlinks and shell take
-effect.
-
-## Tearing down
-
-`dross` reverses what `forge` and `forge-nvim` set up so the next
-`./forge` rebuilds from a pristine baseline:
-
-```bash
-./dross
-```
-
-It purges the userland apt packages and brew formulae forge installs,
-unstows the dotfiles, drops the Antidote / nvim caches and local shims,
-resets the login shell to bash, and finishes with a full system
-upgrade. Homebrew itself, `~/dotfiles`, `~/.ssh`, and unrelated home
-data are left untouched.
-
 ## Manual install
-
-If you'd rather skip `forge`, install `stow` and link only the packages
-you want:
 
 ```bash
 cd ~/dotfiles
