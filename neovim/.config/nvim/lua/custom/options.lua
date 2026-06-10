@@ -3,6 +3,10 @@
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+-- vim.opt. and vim.o. are similar BUT not the same;
+-- For simpler options both are interchangeable but
+-- prefer vim.opt. instead
+
 -- Make line numbers default
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
@@ -19,7 +23,7 @@ vim.o.showmode = false
 --  Remove this option if you want your OS clipboard to remain independent.
 --  See `:help 'clipboard'`
 vim.schedule(function()
-	vim.o.clipboard = "unnamedplus"
+  vim.o.clipboard = "unnamedplus"
 end)
 
 -- Enable break indent
@@ -71,3 +75,9 @@ vim.opt.wrap = true
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
 vim.o.confirm = true
+
+-- Global indentation settings
+vim.opt.tabstop = 2 -- A TAB character looks like 2 spaces
+vim.opt.shiftwidth = 2 -- Indentation amount for < and > commands
+vim.opt.expandtab = true -- Insert spaces when TAB is pressed
+vim.opt.softtabstop = 2 -- How many spaces a <Tab> counts for while editing (makes backspace delete 2 spaces at once)
