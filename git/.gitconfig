@@ -1,62 +1,62 @@
 [user]
-	name = Chahatpreet Singh
-	email = c@chahat.dev
-	signingkey = ~/.ssh/id_ed25519
+  name = Chahatpreet Singh
+  email = c@chahat.dev
+  signingkey = ~/.ssh/id_ed25519
 [gpg]
-	format = ssh
+  format = ssh
 [commit]
-	gpgsign = true
+  gpgsign = true
 [tag]
-	gpgsign = true
-	sort = -version:refname
+  gpgsign = true
+  sort = -version:refname
 [init]
-	defaultBranch = main
+  defaultBranch = main
 [fetch]
-	prune = true
+  prune = true
 [push]
-	autoSetupRemote = true
-	default = simple
+  autoSetupRemote = true
+  default = simple
 [pull]
-	rebase = true
+  rebase = true
 [rebase]
-	autosquash = true
-	autostash = true
+  autosquash = true
+  autostash = true
 [rerere]
-	enabled = true
+  enabled = true
 [column]
-	ui = auto
+  ui = auto
 [branch]
-	sort = -committerdate
+  sort = -committerdate
 [diff]
-	algorithm = histogram
-	colorMoved = default
-	mnemonicPrefix = true
-	renames = copies
-	external = difft
-	tool = difftastic # Set difftastic as the default diff tool.
+  algorithm = histogram
+  colorMoved = default
+  mnemonicPrefix = true
+  renames = copies
+  external = difft
+  tool = difftastic # Set difftastic as the default diff tool.
 [merge]
-	conflictstyle = zdiff3
+  conflictstyle = zdiff3
 [core]
-	editor = nvim
+  editor = nvim
 [alias]
-	st = status -sb
-	co = checkout
-	cob = checkout -b
-	br = branch
-	ci = commit
-	amend = commit --amend --no-edit
-	undo = reset --soft HEAD~1
-	unstage = restore --staged
-	last = log -1 HEAD --stat
-	pushf = push --force-with-lease
-	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
-	dl = log --patch --ext-diff # -p or -u can also be used instead of --patch
-	ds = show --ext-diff
+  st = status -sb
+  co = checkout
+  cob = checkout -b
+  br = branch
+  ci = commit
+  amend = commit --amend --no-edit
+  undo = reset --soft HEAD~1
+  unstage = restore --staged
+  last = log -1 HEAD --stat
+  pushf = push --force-with-lease
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+  dl = log --patch --ext-diff # -p or -u can also be used instead of --patch
+  ds = show --ext-diff
 [pager]
-	difftool = true
+  difftool = true
 [difftool]
-	# Run the difftool immediately, don't ask 'are you sure' each time.
-	prompt = false
+  # Run the difftool immediately, don't ask 'are you sure' each time.
+  prompt = false
 [difftool "difftastic"]
-	# See `man git-difftool` for a description of MERGED, LOCAL and REMOTE.
-	cmd = difft "$MERGED" "$LOCAL" "abcdef1" "100644" "$REMOTE" "abcdef2" "100644"
+  # See `man git-difftool` for a description of MERGED, LOCAL and REMOTE.
+  cmd = difft "$MERGED" "$LOCAL" "abcdef1" "100644" "$REMOTE" "abcdef2" "100644"
