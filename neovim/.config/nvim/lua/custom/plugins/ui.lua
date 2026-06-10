@@ -47,7 +47,7 @@ return {
 			-- Auto-pairs (replaces nvim-autopairs; same plugin family)
 			require("mini.pairs").setup()
 
-			-- Statusline (replaces lightline; same plugin family as the rest)
+			-- Statusline (replaces Lightline; same plugin family as the rest)
 			require("mini.statusline").setup({ use_icons = vim.g.have_nerd_font })
 
 			-- VS Code Statusline Overrides

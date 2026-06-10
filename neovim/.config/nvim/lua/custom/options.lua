@@ -49,7 +49,7 @@ vim.o.splitbelow = true
 --  See `:help 'list'`
 --  and `:help 'listchars'`
 vim.o.list = true
-vim.opt.listchars = "tab:» ,nbsp:¬,extends:»,precedes:«,trail:•"
+vim.opt.listchars = "tab:^ ,nbsp:¬,extends:»,precedes:«,trail:•"
 
 -- Preview substitutions live, as you type!
 vim.o.inccommand = "split"
@@ -63,8 +63,9 @@ vim.o.scrolloff = 8
 -- Smooth scrolling (Neovim 0.10+)
 vim.o.smoothscroll = true
 
--- never show me line breaks if they're not there
-vim.opt.wrap = false
+-- Show me line breaks even if they're not there. Relative numbers can be used to
+-- establish if the line break actually exists or no.
+vim.opt.wrap = true
 
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
